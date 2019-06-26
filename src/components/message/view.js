@@ -1,7 +1,7 @@
 // @flow
 import React from 'react';
 import redraft from 'redraft';
-import Icon from '../icons';
+import Icon from 'src/components/icon';
 import {
   Text,
   Emoji,
@@ -10,12 +10,12 @@ import {
   QuoteWrapperGradient,
   QuotedParagraph,
 } from './style';
-import { messageRenderer } from 'shared/clients/draft-js/message/renderer.web';
-import { toPlainText, toState } from 'shared/draft-utils';
+import { messageRenderer } from 'shared/clients/draft-js/message/renderer';
 import { draftOnlyContainsEmoji } from 'shared/only-contains-emoji';
 import { Byline, Name, Username } from './style';
 import { isShort } from 'shared/clients/draft-js/utils/isShort';
 import type { MessageInfoType } from 'shared/graphql/fragments/message/messageInfo.js';
+import { messageTypeObj } from 'shared/draft-utils/message-types';
 
 type BodyProps = {
   openGallery: Function,
@@ -25,37 +25,58 @@ type BodyProps = {
   showParent?: boolean,
 };
 
+// This regexp matches /community/channel/slug~id, /?thread=id, /?t=id etc.
+// see https://regex101.com/r/aGamna/2/
 export const Body = (props: BodyProps) => {
   const { showParent = true, message, openGallery, me, bubble = true } = props;
   const emojiOnly =
-    message.messageType === 'draftjs' &&
+    message.messageType === messageTypeObj.draftjs &&
     draftOnlyContainsEmoji(JSON.parse(message.content.body));
   const WrapperComponent = bubble ? Text : QuotedParagraph;
   switch (message.messageType) {
-    case 'text':
+    case 'optimistic':
+      return (
+        <div key={message.id} className="markdown">
+          <WrapperComponent me={me}>
+            <div dangerouslySetInnerHTML={{ __html: message.content.body }} />
+          </WrapperComponent>
+        </div>
+      );
+    case messageTypeObj.text:
     default:
       return (
-        <WrapperComponent me={me}>{message.content.body}</WrapperComponent>
+        <WrapperComponent key={message.id} me={me}>
+          {message.content.body}
+        </WrapperComponent>
       );
-    case 'media': {
+    case messageTypeObj.media: {
       if (typeof message.id === 'number' && message.id < 0) {
         return null;
       }
-      return <Image onClick={openGallery} src={message.content.body} />;
-    }
-    case 'draftjs': {
       return (
-        <WrapperComponent me={me}>
+        <Image
+          key={message.id}
+          onClick={openGallery}
+          src={message.content.body}
+        />
+      );
+    }
+    case messageTypeObj.draftjs: {
+      const parsed = JSON.parse(message.content.body);
+      return (
+        <WrapperComponent key={message.id} me={me}>
           {message.parent && showParent && (
             // $FlowIssue
             <QuotedMessage message={message.parent} />
           )}
           {emojiOnly ? (
             <Emoji>
-              {toPlainText(toState(JSON.parse(message.content.body)))}
+              {parsed && Array.isArray(parsed.blocks) && parsed.blocks[0].text}
             </Emoji>
           ) : (
-            redraft(JSON.parse(message.content.body), messageRenderer)
+            <div key={message.id} className="markdown">
+              {redraft(parsed, messageRenderer)}
+            </div>
           )}
         </WrapperComponent>
       );

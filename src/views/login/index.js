@@ -1,31 +1,38 @@
 // @flow
 import * as React from 'react';
 import { withRouter } from 'react-router';
+import { connect } from 'react-redux';
 import compose from 'recompose/compose';
 import { Link } from 'react-router-dom';
-import Icon from 'src/components/icons';
+import { OutlineButton } from 'src/components/button';
 import FullscreenView from 'src/components/fullscreenView';
 import LoginButtonSet from 'src/components/loginButtonSet';
 import {
   LargeTitle,
   LargeSubtitle,
-  UpsellIconContainer,
   FullscreenContent,
   CodeOfConduct,
 } from './style';
 import queryString from 'query-string';
 import { track, events } from 'src/helpers/analytics';
+import { CLIENT_URL } from 'src/api/constants';
+import { setTitlebarProps } from 'src/actions/titlebar';
 
 type Props = {
   redirectPath: ?string,
   signinType?: ?string,
   close?: Function,
   location?: Object,
+  dispatch: Function,
+  githubOnly?: boolean,
 };
 
-export class Login extends React.Component<Props> {
+class Login extends React.Component<Props> {
   componentDidMount() {
     let redirectPath;
+    const { dispatch } = this.props;
+    dispatch(setTitlebarProps({ title: 'Login' }));
+
     if (this.props.location) {
       const searchObj = queryString.parse(this.props.location.search);
       redirectPath = searchObj.r;
@@ -35,34 +42,36 @@ export class Login extends React.Component<Props> {
   }
 
   render() {
-    const { redirectPath, signinType = 'signin' } = this.props;
-
-    const viewTitle =
-      signinType === 'login' ? 'Welcome back!' : 'Sign in to get started';
-
-    const viewSubtitle =
-      signinType === 'login'
-        ? "We're happy to see you again - sign in below to get back into the conversation!"
-        : 'Spectrum is a place where communities can share, discuss, and grow together. Sign in below to get in on the conversation.';
+    const { redirectPath, signinType = 'signin', githubOnly } = this.props;
 
     return (
-      <FullscreenView
-        hasBackground
-        // $FlowFixMe
-        noCloseButton={!this.props.close}
-        close={this.props.close && this.props.close}
-      >
+      <FullscreenView closePath={CLIENT_URL}>
         <FullscreenContent
           data-cy="login-page"
           style={{ justifyContent: 'center' }}
         >
-          <UpsellIconContainer>
-            <Icon glyph={'emoji'} size={64} />
-          </UpsellIconContainer>
-          <LargeTitle>{viewTitle}</LargeTitle>
-          <LargeSubtitle>{viewSubtitle}</LargeSubtitle>
+          <LargeTitle>{githubOnly ? 'Sign up' : 'Log in'}</LargeTitle>
+          {githubOnly && (
+            <LargeSubtitle>
+              New accounts on Spectrum can only be created by signing up with
+              GitHub.
+            </LargeSubtitle>
+          )}
 
-          <LoginButtonSet redirectPath={redirectPath} signinType={signinType} />
+          <LoginButtonSet
+            githubOnly={githubOnly}
+            redirectPath={redirectPath}
+            signinType={signinType}
+          />
+
+          {githubOnly && (
+            <OutlineButton
+              css={{ width: '100%' }}
+              to={`/login?r=${redirectPath || `${CLIENT_URL}/home`}`}
+            >
+              Existing user? Click here to log in
+            </OutlineButton>
+          )}
 
           <CodeOfConduct>
             By using Spectrum, you agree to our{' '}
@@ -85,4 +94,7 @@ export class Login extends React.Component<Props> {
   }
 }
 
-export default compose(withRouter)(Login);
+export default compose(
+  withRouter,
+  connect()
+)(Login);

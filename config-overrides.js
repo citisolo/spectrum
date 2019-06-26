@@ -18,6 +18,7 @@ const { ReactLoadablePlugin } = require('react-loadable/webpack');
 const OfflinePlugin = require('offline-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const BundleBuddyWebpackPlugin = require('bundle-buddy-webpack-plugin');
+const CircularDependencyPlugin = require('circular-dependency-plugin');
 
 // Recursively walk a folder and get all file paths
 function walkFolder(currentDirPath, callback) {
@@ -148,7 +149,7 @@ module.exports = function override(config, env) {
   config.plugins.unshift(
     new webpack.optimize.CommonsChunkPlugin({
       names: ['bootstrap'],
-      filename: 'static/js/[name].js',
+      filename: 'static/js/[name].[hash].js',
       minChunks: Infinity,
     })
   );
@@ -164,5 +165,18 @@ module.exports = function override(config, env) {
       })
     );
   }
+
+  // NOTE(@mxstbr): This works around an issue where webpack was resolving the "module" path of b2a
+  // which breaks when imported on the fronted. We need to import the built version.
+  config.resolve.alias.b2a = path.resolve(
+    __dirname,
+    'node_modules/b2a/lib/index.js'
+  );
+  config.plugins.push(
+    new CircularDependencyPlugin({
+      cwd: process.cwd(),
+      failOnError: true,
+    })
+  );
   return rewireStyledComponents(config, env, { ssr: true });
 };

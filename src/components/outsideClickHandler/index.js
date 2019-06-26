@@ -2,25 +2,30 @@
 import * as React from 'react';
 
 type Props = {
-  children: React.Node,
+  children: React$Node,
   style?: Object,
   onOutsideClick: Function,
 };
 
 class OutsideAlerter extends React.Component<Props> {
-  wrapperRef: React.Node;
+  wrapperRef: React$Node;
 
+  // iOS bug, see: https://stackoverflow.com/questions/10165141/jquery-on-and-delegate-doesnt-work-on-ipad
   componentDidMount() {
     // $FlowFixMe
-    document.addEventListener('mousedown', this.handleClickOutside);
+    document
+      .getElementById('root')
+      .addEventListener('mousedown', this.handleClickOutside);
   }
 
   componentWillUnmount() {
     // $FlowFixMe
-    document.removeEventListener('mousedown', this.handleClickOutside);
+    document
+      .getElementById('root')
+      .removeEventListener('mousedown', this.handleClickOutside);
   }
 
-  setWrapperRef = (node: React.Node) => {
+  setWrapperRef = (node: React$Node) => {
     this.wrapperRef = node;
   };
 

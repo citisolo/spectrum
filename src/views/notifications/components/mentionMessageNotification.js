@@ -2,23 +2,21 @@
 import * as React from 'react';
 import { ActorsRow } from './actorsRow';
 import { parseNotificationDate, parseContext, parseActors } from '../utils';
-import Icon from '../../../components/icons';
+import Icon from 'src/components/icon';
 import {
   TextContent,
   Content,
   NotificationCard,
-  NotificationListRow,
   SpecialContext,
 } from '../style';
-import {
-  CardLink,
-  CardContent,
-} from '../../../components/threadFeedCard/style';
+import { CardLink } from 'src/components/threadFeedCard/style';
+import getThreadLink from 'src/helpers/get-thread-link';
 
 type Props = {
   notification: Object,
   currentUser: Object,
   history?: Object,
+  markSingleNotificationSeen: Function,
 };
 type State = {
   communityName: string,
@@ -32,18 +30,24 @@ type State = {
 
 export class MentionMessageNotification extends React.Component<Props, State> {
   render() {
-    const { notification, currentUser } = this.props;
+    const {
+      notification,
+      currentUser,
+      markSingleNotificationSeen,
+    } = this.props;
 
     const actors = parseActors(notification.actors, currentUser, false);
     const date = parseNotificationDate(notification.modifiedAt);
     const context = parseContext(notification.context, currentUser);
 
     return (
-      <NotificationCard>
+      <NotificationCard
+        onClick={() => markSingleNotificationSeen(notification.id)}
+        isSeen={notification.isSeen}
+      >
         <CardLink
           to={{
-            pathname: window.location.pathname,
-            search: `?thread=${notification.context.id}`,
+            pathname: getThreadLink(notification.context.payload),
           }}
         />
         <SpecialContext>
@@ -57,41 +61,6 @@ export class MentionMessageNotification extends React.Component<Props, State> {
           </TextContent>
         </Content>
       </NotificationCard>
-    );
-  }
-}
-
-export class MiniMentionMessageNotification extends React.Component<
-  Props,
-  State
-> {
-  render() {
-    const { notification, currentUser } = this.props;
-
-    const actors = parseActors(notification.actors, currentUser, false);
-    const date = parseNotificationDate(notification.modifiedAt);
-    const context = parseContext(notification.context, currentUser);
-
-    return (
-      <NotificationListRow isSeen={notification.isSeen}>
-        <CardLink
-          to={{
-            pathname: window.location.pathname,
-            search: `?thread=${notification.context.id}`,
-          }}
-        />
-        <CardContent>
-          <SpecialContext>
-            <Icon glyph="mention" />
-            <ActorsRow actors={actors.asObjects} />
-          </SpecialContext>
-          <Content>
-            <TextContent pointer={false}>
-              {actors.asString} mentioned you in {context.asString} {date}
-            </TextContent>
-          </Content>
-        </CardContent>
-      </NotificationListRow>
     );
   }
 }

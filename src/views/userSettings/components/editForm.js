@@ -5,8 +5,8 @@ import { withApollo } from 'react-apollo';
 import compose from 'recompose/compose';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Button } from 'src/components/buttons';
-import Icon from 'src/components/icons';
+import { PrimaryOutlineButton } from 'src/components/button';
+import Icon from 'src/components/icon';
 import { SERVER_URL, CLIENT_URL } from 'src/api/constants';
 import GithubProfile from 'src/components/githubProfile';
 import { GithubSigninButton } from 'src/components/loginButtonSet/github';
@@ -324,7 +324,7 @@ class UserWithData extends React.Component<Props, State> {
       didChangeEmail,
     } = this.state;
 
-    const postAuthRedirectPath = `?r=${CLIENT_URL}/users/${username}/settings`;
+    const postAuthRedirectPath = `${CLIENT_URL}/users/${username}/settings`;
 
     return (
       <SectionCard data-cy="user-edit-form">
@@ -370,6 +370,7 @@ class UserWithData extends React.Component<Props, State> {
             label="Username"
             size={'small'}
             username={username}
+            placeholder="Set a username..."
             onValidationResult={this.handleUsernameValidation}
             onError={this.handleOnError}
             dataCy="user-username-input"
@@ -421,7 +422,7 @@ class UserWithData extends React.Component<Props, State> {
                   <GithubSignin>
                     <StyledLabel>Connect your GitHub Profile</StyledLabel>
                     <GithubSigninButton
-                      href={`${SERVER_URL}/auth/github${postAuthRedirectPath}`}
+                      href={`${SERVER_URL}/auth/github?r=${postAuthRedirectPath}`}
                       preferred={true}
                       showAfter={false}
                       onClickHandler={null}
@@ -439,7 +440,7 @@ class UserWithData extends React.Component<Props, State> {
                       Your GitHub Profile ·{' '}
                       <span>
                         <a
-                          href={`${SERVER_URL}/auth/github${postAuthRedirectPath}`}
+                          href={`${SERVER_URL}/auth/github?r=${postAuthRedirectPath}`}
                         >
                           Refresh username
                         </a>
@@ -452,21 +453,21 @@ class UserWithData extends React.Component<Props, State> {
           />
 
           <Actions>
-            <Button
+            <PrimaryOutlineButton
               disabled={
                 !name ||
                 nameError ||
                 !username ||
-                usernameError ||
+                !!usernameError ||
                 isLoading ||
-                emailError
+                !!emailError
               }
               loading={isLoading}
               onClick={this.save}
-              dataCy="save-button"
+              data-cy="save-button"
             >
-              Save
-            </Button>
+              {isLoading ? 'Saving...' : 'Save'}
+            </PrimaryOutlineButton>
           </Actions>
 
           {createError && (

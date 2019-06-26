@@ -1,4 +1,5 @@
 // @flow
+const debug = require('debug')('api:mutations:edit-thread');
 import type { GraphQLContext } from '../../';
 import type { EditThreadInput } from '../../models/thread';
 import UserError from '../../utils/UserError';
@@ -7,6 +8,7 @@ import { getThreads, editThread } from '../../models/thread';
 import { getUserPermissionsInCommunity } from '../../models/usersCommunities';
 import { getUserPermissionsInChannel } from '../../models/usersChannels';
 import { isAuthedResolver as requireAuth } from '../../utils/permissions';
+import processThreadContent from 'shared/draft-utils/process-thread-content';
 import { events } from 'shared/analytics';
 import { trackQueue } from 'shared/bull/queues';
 import {
@@ -62,13 +64,15 @@ export default requireAuth(async (_: any, args: Input, ctx: GraphQLContext) => {
     getUserPermissionsInChannel(threadToEvaluate.channelId, user.id),
   ]);
 
+  const canEdit =
+    !channelPermissions.isBlocked &&
+    !communityPermissions.isBlocked &&
+    (threadToEvaluate.creatorId === user.id ||
+      communityPermissions.isModerator ||
+      communityPermissions.isOwner);
   // only the thread creator can edit the thread
   // also prevent deletion if the user was blocked
-  if (
-    threadToEvaluate.creatorId !== user.id ||
-    channelPermissions.isBlocked ||
-    communityPermissions.isBlocked
-  ) {
+  if (!canEdit) {
     trackQueue.add({
       userId: user.id,
       event: events.THREAD_EDITED_FAILED,
@@ -82,6 +86,8 @@ export default requireAuth(async (_: any, args: Input, ctx: GraphQLContext) => {
       "You don't have permission to make changes to this thread."
     );
   }
+
+  input.content.body = processThreadContent('TEXT', input.content.body || '');
 
   /*
     When threads are sent to the client, all image urls are signed and proxied
@@ -130,6 +136,7 @@ export default requireAuth(async (_: any, args: Input, ctx: GraphQLContext) => {
     });
   }
 
+  debug('store new body to database:', initialBody);
   const newInput = Object.assign({}, input, {
     ...input,
     content: {

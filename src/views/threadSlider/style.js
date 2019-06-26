@@ -1,27 +1,29 @@
 // @flow
+import styled from 'styled-components';
 import theme from 'shared/theme';
-// $FlowFixMe
-import styled, { css } from 'styled-components';
-// $FlowFixMe
-import { Link } from 'react-router-dom';
-import { zIndex } from '../../components/globals';
+import { zIndex } from 'src/components/globals';
+import {
+  MEDIA_BREAK,
+  MIN_MAX_WIDTH,
+  TITLEBAR_HEIGHT,
+  NAVBAR_WIDTH,
+} from 'src/components/layout';
 
-const animation = css`
-  opacity: 0;
-  transform: translateX(1em) translate3d(0, 0, 0);
-  transition: opacity ${props => props.duration}ms ease-out,
-    transform ${props => props.duration}ms ease-in-out;
+export const Container = styled.div`
+  display: flex;
+  justify-content: center;
+  z-index: ${zIndex.slider + 1};
+  position: absolute;
+  left: ${NAVBAR_WIDTH}px;
+  right: 0;
+  top: 0;
+  bottom: 0;
 
-  ${props =>
-    props.entering || props.entered
-      ? css`
-          opacity: 1;
-          transform: translateX(0em) translate3d(0, 0, 0);
-        `
-      : ''};
+  @media (max-width: ${MEDIA_BREAK}px) {
+    top: ${TITLEBAR_HEIGHT}px;
+    left: 0;
+  }
 `;
-
-export const Container = styled.div``;
 
 export const Overlay = styled.div`
   position: fixed;
@@ -29,59 +31,39 @@ export const Overlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.15);
-  z-index: ${zIndex.slider + 2};
-
-  ${animation};
+  background: rgba(0, 0, 0, 0.24);
+  z-index: -1;
 `;
 
-export const Thread = styled.div`
+export const ThreadContainer = styled.div`
   display: flex;
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 650px;
-  background: #fff;
-  z-index: ${zIndex.slider + 3};
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
-  flex-direction: column;
-  max-width: 100%;
+  justify-content: center;
+  width: 100%;
+  z-index: ${zIndex.slider + 4};
 
-  @media (max-width: 768px) {
-    top: -48px;
-    width: 100%;
+  @media (max-width: ${MEDIA_BREAK}px) {
+    max-width: 100%;
+    box-shadow: 0;
   }
-
-  @media (min-width: 768px) {
-    ${animation};
-  }
-`;
-
-export const Close = styled(Link)`
-  display: flex;
-  align-items: center;
-  flex: 1;
-  border-bottom: 1px solid ${theme.bg.border};
-  padding: 8px 16px;
-  flex: 1 0 auto;
-  background: ${theme.bg.wash};
-  max-height: 48px;
-  justify-content: flex-end;
 `;
 
 export const CloseButton = styled.span`
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 32px;
-  color: ${theme.text.alt};
-`;
+  background: ${theme.bg.reverse};
+  color: ${theme.text.reverse};
+  z-index: ${zIndex.slider + 4};
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 
-export const CloseLabel = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: ${theme.text.alt};
+  @media (max-width: ${MEDIA_BREAK}px) {
+    display: none;
+  }
 `;

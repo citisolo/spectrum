@@ -41,25 +41,13 @@ describe('sidebar components on thread view', () => {
     });
 
     it('should render', () => {
-      // loaded login upsell in sidebar
-      cy.get('[data-cy="thread-sidebar-login"]')
-        .scrollIntoView()
-        .should('be.visible');
-
       // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]')
+      cy.get('[data-cy="community-profile-card"]')
         .scrollIntoView()
         .should('be.visible');
 
       // loaded join button which directs to login
-      cy.get('[data-cy="thread-sidebar-join-login-button"]').should(
-        'be.visible'
-      );
-
-      // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]')
-        .scrollIntoView()
-        .should('be.visible');
+      cy.get('[data-cy="profile-join-button"]').should('be.visible');
     });
   });
 
@@ -71,21 +59,13 @@ describe('sidebar components on thread view', () => {
     });
 
     it('should render', () => {
-      // loaded login upsell in sidebar
-      cy.get('[data-cy="thread-sidebar-login"]').should('not.be.visible');
-
       // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]')
+      cy.get('[data-cy="community-profile-card"]')
         .scrollIntoView()
         .should('be.visible');
 
       // loaded join button which directs to login
-      cy.get('[data-cy="thread-sidebar-join-community-button"]')
-        .scrollIntoView()
-        .should('be.visible');
-
-      // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]')
+      cy.get('[data-cy="profile-join-button"]')
         .scrollIntoView()
         .should('be.visible');
     });
@@ -99,21 +79,13 @@ describe('sidebar components on thread view', () => {
     });
 
     it('should render', () => {
-      // loaded login upsell in sidebar
-      cy.get('[data-cy="thread-sidebar-login"]').should('not.be.visible');
-
       // loaded community info
-      cy.get('[data-cy="thread-sidebar-community-info"]')
+      cy.get('[data-cy="community-profile-card"]')
         .scrollIntoView()
         .should('be.visible');
 
       // loaded join button which directs to login
-      cy.get('[data-cy="thread-sidebar-view-community-button"]')
-        .scrollIntoView()
-        .should('be.visible');
-
-      // loaded more conversations component
-      cy.get('[data-cy="thread-sidebar-more-threads"]')
+      cy.get('[data-cy="community-profile-card"]')
         .scrollIntoView()
         .should('be.visible');
     });
@@ -181,7 +153,7 @@ describe('public thread', () => {
 
     it('should render', () => {
       cy.get('[data-cy="thread-view"]').should('not.be.visible');
-      cy.get('[data-cy="blocked-thread-view"]').should('be.visible');
+      cy.get('[data-cy="null-thread-view"]').should('be.visible');
     });
   });
 
@@ -194,7 +166,7 @@ describe('public thread', () => {
 
     it('should render', () => {
       cy.get('[data-cy="thread-view"]').should('not.be.visible');
-      cy.get('[data-cy="blocked-thread-view"]').should('be.visible');
+      cy.get('[data-cy="null-thread-view"]').should('be.visible');
     });
   });
 });

@@ -33,11 +33,8 @@ describe('chat input', () => {
       cy.get('[data-cy="thread-view"]').should('be.visible');
       cy.get('[data-cy="chat-input-send-button"]').should('not.be.visible');
       cy.get('[data-cy="chat-input-media-uploader"]').should('not.be.visible');
-      cy.get('[data-cy="join-channel-login-upsell"]').should('be.visible');
-      cy.get('[data-cy="thread-join-channel-upsell-button"]').should(
-        'be.visible'
-      );
-      cy.get('[data-cy="thread-join-channel-upsell-button"]').click();
+      cy.get('[data-cy="join-community-chat-upsell"]').should('be.visible');
+      cy.get('[data-cy="join-community-chat-upsell"]').click();
       cy.get('[data-cy="login-modal"]').should('be.visible');
     });
   });
@@ -52,9 +49,7 @@ describe('chat input', () => {
     it('should render', () => {
       cy.get('[data-cy="thread-view"]').should('be.visible');
       cy.get('[data-cy="chat-input-send-button"]').should('not.be.visible');
-      cy.get('[data-cy="thread-join-channel-upsell-button"]').should(
-        'be.visible'
-      );
+      cy.get('[data-cy="join-community-chat-upsell"]').should('be.visible');
     });
   });
 
@@ -147,6 +142,7 @@ describe('chat input', () => {
     });
 
     it('should render', () => {
+      cy.get('[data-cy="thread-view"]').should('be.visible');
       cy.get('[data-cy="chat-input-send-button"]').should('not.be.visible');
     });
   });

@@ -8,13 +8,8 @@ import { addToastWithTimeout } from 'src/actions/toasts';
 import { openModal } from 'src/actions/modals';
 import type { Dispatch } from 'redux';
 import { withCurrentUser } from 'src/components/withCurrentUser';
-import {
-  JoinChannelContainer,
-  JoinChannelContent,
-  JoinChannelTitle,
-  JoinChannelSubtitle,
-} from './style';
-import { Button } from 'src/components/buttons';
+import { JoinChannelContainer, JoinChannelContent } from './style';
+import { Button } from 'src/components/button';
 
 type Props = {
   channel: Object,
@@ -29,15 +24,9 @@ type State = {
 };
 
 class JoinChannel extends React.Component<Props, State> {
-  constructor() {
-    super();
+  state = { isLoading: false };
 
-    this.state = {
-      isLoading: false,
-    };
-  }
-
-  login = () => this.props.dispatch(openModal('CHAT_INPUT_LOGIN_MODAL'));
+  login = () => this.props.dispatch(openModal('LOGIN_MODAL'));
 
   toggleSubscription = () => {
     const { channel, dispatch } = this.props;
@@ -95,44 +84,27 @@ class JoinChannel extends React.Component<Props, State> {
   render() {
     const { isLoading } = this.state;
     const { channel, community, currentUser } = this.props;
-
-    if (!currentUser) {
-      return (
-        <JoinChannelContainer data-cy="join-channel-login-upsell">
-          <JoinChannelContent>
-            <JoinChannelTitle>Log in or sign up to chat</JoinChannelTitle>
-          </JoinChannelContent>
-
-          <Button
-            loading={isLoading}
-            onClick={this.login}
-            dataCy="thread-join-channel-upsell-button"
-          >
-            Log in or sign up
-          </Button>
-        </JoinChannelContainer>
-      );
-    }
+    const label = !currentUser
+      ? `Join ${community.name} community`
+      : community.communityPermissions.isMember
+      ? `Join ${channel.name} channel`
+      : `Join ${community.name} community`;
 
     return (
       <JoinChannelContainer>
         <JoinChannelContent>
-          <JoinChannelTitle>
-            Join the {channel.name} channel in the {community.name} community
-          </JoinChannelTitle>
-          <JoinChannelSubtitle>
-            Once you join this channel you’ll be able to post your replies here!
-          </JoinChannelSubtitle>
+          <Button
+            loading={isLoading}
+            onClick={currentUser ? this.toggleSubscription : this.login}
+            data-cy={
+              currentUser
+                ? 'thread-join-channel-upsell-button'
+                : 'join-channel-login-upsell'
+            }
+          >
+            {isLoading ? 'Joining...' : label}
+          </Button>
         </JoinChannelContent>
-
-        <Button
-          loading={isLoading}
-          onClick={this.toggleSubscription}
-          icon="plus"
-          dataCy="thread-join-channel-upsell-button"
-        >
-          Join
-        </Button>
       </JoinChannelContainer>
     );
   }

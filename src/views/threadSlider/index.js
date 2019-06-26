@@ -1,113 +1,76 @@
-import React, { Component } from 'react';
+// @flow
+import React, { useEffect, useRef } from 'react';
 import { connect } from 'react-redux';
-import {
-  openThreadSlider,
-  closeThreadSlider,
-} from '../../actions/threadSlider';
-import queryString from 'query-string';
-import { Link } from 'react-router-dom';
-import Transition from 'react-transition-group/Transition';
-import {
-  Container,
-  Overlay,
-  Thread,
-  Close,
-  CloseButton,
-  CloseLabel,
-} from './style';
-import Icon from '../../components/icons';
-import { SliderThreadView } from '../thread';
+import type { Location, History, Match } from 'react-router';
+import Icon from 'src/components/icon';
+import { ThreadView } from 'src/views/thread';
 import { ErrorBoundary } from 'src/components/error';
 import { ESC } from 'src/helpers/keycodes';
+import { setTitlebarProps } from 'src/actions/titlebar';
+import type { TitlebarPayloadProps } from 'src/views/globalTitlebar';
+import { Container, Overlay, ThreadContainer, CloseButton } from './style';
 
-const ANIMATION_DURATION = 50;
+type Props = {
+  previousLocation: Location,
+  history: History,
+  match: Match,
+  titlebar: TitlebarPayloadProps,
+  dispatch: Dispatch<Object>,
+};
 
-class ThreadSlider extends Component {
-  componentDidMount() {
-    document.addEventListener('keydown', this.handleKeyPress, false);
-  }
+const ThreadSlider = (props: Props) => {
+  const { previousLocation, history, match, titlebar, dispatch } = props;
+  const prevTitlebarProps = useRef(titlebar);
+  const { params } = match;
+  const { threadId } = params;
 
-  componentDidUpdate(prevProps) {
-    const thisParsed = queryString.parse(this.props.location.search);
-    const prevParsed = queryString.parse(prevProps.location.search);
-    const thisThreadId = thisParsed.thread;
-    const prevThreadId = prevParsed.thread;
-    if (thisThreadId && !prevThreadId) {
-      this.props.dispatch(openThreadSlider());
-    }
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.handleKeyPress, false);
-    this.closeSlider();
-  }
-
-  handleKeyPress = e => {
-    const parsed = queryString.parse(this.props.location.search);
-    const threadId = parsed.thread;
-    if (!threadId) return;
-    if (e.keyCode === ESC) {
-      this.closeSlider();
-      return this.props.history.push(this.props.location.pathname);
-    }
+  const closeSlider = (e: any) => {
+    e && e.stopPropagation();
+    history.push({ ...previousLocation, state: { modal: false } });
   };
 
-  closeSlider = () => {
-    return this.props.dispatch(closeThreadSlider());
-  };
+  useEffect(() => {
+    const handleKeyPress = (e: any) => {
+      if (e.keyCode === ESC) {
+        e.stopPropagation();
+        closeSlider();
+      }
+    };
 
-  render() {
-    const parsed = queryString.parse(this.props.location.search);
-    const threadId = parsed.thread;
+    document.addEventListener('keydown', handleKeyPress, false);
+    return () => {
+      const prev = prevTitlebarProps.current;
+      dispatch(setTitlebarProps({ ...prev }));
+      document.removeEventListener('keydown', handleKeyPress, false);
+    };
+  }, []);
 
-    return (
-      <ErrorBoundary>
-        <div>
-          <Transition in={!!threadId} timeout={ANIMATION_DURATION}>
-            {state => (
-              <div>
-                {threadId && (
-                  <Container>
-                    <Link
-                      to={this.props.location.pathname}
-                      onClick={this.closeSlider}
-                    >
-                      <Overlay
-                        entering={state === 'entering'}
-                        entered={state === 'entered'}
-                        duration={ANIMATION_DURATION}
-                      />
-                    </Link>
-                    <Thread
-                      entering={state === 'entering'}
-                      entered={state === 'entered'}
-                      duration={ANIMATION_DURATION}
-                    >
-                      <Close
-                        to={this.props.location.pathname}
-                        onClick={this.closeSlider}
-                      >
-                        <CloseLabel>Close</CloseLabel>
-                        <CloseButton>
-                          <Icon glyph="view-forward" size={24} />
-                        </CloseButton>
-                      </Close>
+  return (
+    <ErrorBoundary>
+      <Container data-cy="modal-container">
+        <ThreadContainer>
+          <ThreadView
+            isModal
+            css={{
+              width: '100%',
+              position: 'relative',
+              zIndex: '1',
+            }}
+            threadId={threadId}
+          >
+            <Overlay onClick={closeSlider} data-cy="overlay" />
+          </ThreadView>
+        </ThreadContainer>
 
-                      <SliderThreadView
-                        threadId={threadId}
-                        threadViewContext={'slider'}
-                        slider
-                      />
-                    </Thread>
-                  </Container>
-                )}
-              </div>
-            )}
-          </Transition>
-        </div>
-      </ErrorBoundary>
-    );
-  }
-}
+        <CloseButton data-cy="thread-slider-close" onClick={closeSlider}>
+          <Icon glyph="view-close" size={32} />
+        </CloseButton>
+      </Container>
+    </ErrorBoundary>
+  );
+};
 
-export default connect()(ThreadSlider);
+const map = state => ({ titlebar: state.titlebar });
+
+// $FlowIssue
+export default connect(map)(ThreadSlider);

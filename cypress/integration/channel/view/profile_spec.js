@@ -40,11 +40,8 @@ describe('public channel', () => {
     cy.get('[data-cy="channel-view"]').should('be.visible');
   });
 
-  it('should contain channel metadata', () => {
-    cy.get('[data-cy="channel-profile-full"]').should('be.visible');
-    cy.contains(community.name);
-    cy.contains(publicChannel.description);
-    cy.contains(publicChannel.name);
+  it('should render search input', () => {
+    cy.get('[data-cy="channel-search-input"]').should('be.visible');
   });
 });
 
@@ -56,7 +53,7 @@ describe('public channel in private community signed out', () => {
   });
 
   it('should render channel not found view', () => {
-    cy.get('[data-cy="channel-not-found"]').should('be.visible');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });
 
@@ -84,7 +81,7 @@ describe('public channel in private community without permission', () => {
   });
 
   it('should render channel not found view', () => {
-    cy.get('[data-cy="channel-not-found"]').should('be.visible');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });
 
@@ -96,11 +93,6 @@ describe('archived channel', () => {
   it('should render profile', () => {
     cy.get('[data-cy="channel-view"]').should('be.visible');
   });
-
-  it('should contain archived tag', () => {
-    cy.get('[data-cy="channel-profile-full"]').should('be.visible');
-    cy.contains('(Archived)');
-  });
 });
 
 describe('deleted channel', () => {
@@ -109,8 +101,7 @@ describe('deleted channel', () => {
   });
 
   it('should render error view', () => {
-    cy.get('[data-cy="channel-not-found"]').should('be.visible');
-    cy.contains('We couldn’t find a channel with this name');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });
 
@@ -122,8 +113,7 @@ describe('blocked in public channel', () => {
   });
 
   it('should render error view', () => {
-    cy.get('[data-cy="channel-view-blocked"]').should('be.visible');
-    cy.contains('You don’t have permission to view this channel');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });
 
@@ -147,7 +137,7 @@ describe('blocked in private channel', () => {
   });
 
   it('should render channel not found view', () => {
-    cy.get('[data-cy="channel-not-found"]').should('be.visible');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });
 
@@ -157,6 +147,6 @@ describe('is not logged in', () => {
   });
 
   it('should render channel not found view', () => {
-    cy.get('[data-cy="channel-not-found"]').should('be.visible');
+    cy.get('[data-cy="channel-view-error"]').should('be.visible');
   });
 });

@@ -6,6 +6,7 @@
   attempt to use or update the types here
 
 */
+import type { MessageType } from 'shared/draft-utils/message-types';
 
 export type DBChannel = {
   communityId: string,
@@ -104,7 +105,7 @@ export type DBMessage = {
     body: string,
   },
   id: string,
-  messageType: 'text' | 'media' | 'draftjs',
+  messageType: MessageType,
   senderId: string,
   deletedAt?: Date,
   deletedBy?: string,
@@ -239,6 +240,7 @@ export type DBThread = {
   isLocked: boolean,
   lockedBy?: string,
   lockedAt?: Date,
+  editedBy?: string,
   lastActive: Date,
   modifiedAt?: Date,
   deletedAt?: string,

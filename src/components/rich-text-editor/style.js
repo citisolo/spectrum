@@ -9,6 +9,7 @@ import { Transition, zIndex } from 'src/components/globals';
 import { UserHoverProfile } from 'src/components/hoverProfile';
 import type { Node } from 'react';
 import { withCurrentUser } from 'src/components/withCurrentUser';
+import { MEDIA_BREAK } from 'src/components/layout';
 
 const UsernameWrapper = styled.span`
   color: ${props =>
@@ -22,11 +23,9 @@ const UsernameWrapper = styled.span`
   position: relative;
   display: inline-block;
   line-height: 1.4;
-
   &:hover {
     text-decoration: underline;
   }
-
   a {
     color: inherit !important;
     text-decoration: none !important;
@@ -60,15 +59,20 @@ export const Mention = compose(
   connect()
 )(MentionWithCurrentUser);
 
+export const customStyleFn = (style: Object, block: Object) => {
+  if (style.first() === 'CODE' && block.getType() === 'unstyled')
+    return {
+      border: `1px solid ${theme.bg.border}`,
+      borderRadius: '4px',
+      backgroundColor: theme.bg.wash,
+      padding: '1px 4px',
+      fontFamily: 'monospace',
+      color: theme.warn.alt,
+    };
+  return style;
+};
+
 export const customStyleMap = {
-  CODE: {
-    border: `1px solid ${theme.bg.border}`,
-    borderRadius: '4px',
-    backgroundColor: theme.bg.wash,
-    padding: '1px 4px',
-    fontFamily: 'monospace',
-    color: theme.warn.alt,
-  },
   blockquote: {
     lineHeight: '1.5',
     borderLeft: `4px solid ${theme.bg.border}`,
@@ -97,7 +101,7 @@ export const MediaRow = styled.div`
   margin-top: 16px;
   width: calc(100% + 48px);
 
-  @media (max-width: 768px) {
+  @media (max-width: ${MEDIA_BREAK}px) {
     position: absolute;
     top: calc(100% - 90px);
   }
@@ -105,9 +109,10 @@ export const MediaRow = styled.div`
 
 export const ComposerBase = styled.div`
   position: relative;
-  flex: none;
-  flex-direction: column;
-  display: flex;
+  flex: 1;
+  max-height: ${props => (props.isOpen ? 'calc(100vh - 160px)' : 'auto')};
+  overflow-y: ${props => (props.isOpen ? 'scroll' : 'auto')};
+  padding-left: ${props => (props.isOpen ? '25px' : '0')};
 
   > label {
     position: absolute;
@@ -149,9 +154,12 @@ export const Expander = styled.div`
   justify-content: flex-start;
   padding: 4px;
   border-radius: 12px;
+  margin-left: 5px;
 
   > button > div {
     color: ${theme.text.placeholder};
+    background-color: white;
+    border-radius: 12px;
   }
 
   > button:hover > div {
@@ -166,6 +174,7 @@ export const Expander = styled.div`
 
       > button > div {
         color: ${theme.brand.wash};
+        background-color: transparent;
       }
 
       > button:hover > div {

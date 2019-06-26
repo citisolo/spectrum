@@ -139,8 +139,9 @@ const init = () => {
             return user;
           })
           .catch(err => {
-            done(err);
-            return null;
+            return done(null, err, {
+              message: 'Please sign in with GitHub to create a new account.',
+            });
           });
       }
     )
@@ -204,8 +205,9 @@ const init = () => {
             return user;
           })
           .catch(err => {
-            done(err);
-            return null;
+            return done(null, err, {
+              message: 'Please sign in with GitHub to create a new account.',
+            });
           });
       }
     )
@@ -268,8 +270,9 @@ const init = () => {
             return user;
           })
           .catch(err => {
-            done(err);
-            return null;
+            return done(null, err, {
+              message: 'Please sign in with GitHub to create a new account.',
+            });
           });
       }
     )
@@ -294,6 +297,11 @@ const init = () => {
         const githubUsername =
           profile.username || profile._json.login || fallbackUsername;
 
+        const existingUserWithProviderId = await getUserByIndex(
+          'githubProviderId',
+          profile.id
+        );
+
         if (req.user) {
           // if a user exists in the request body, it means the user is already
           // authed and is trying to connect a github account. Before we do so
@@ -302,7 +310,6 @@ const init = () => {
           // 2. The providerId returned from GitHub isnt' being used by another user
 
           // 1
-          // if the user already has a githubProviderId, don't override it
           if (req.user.githubProviderId) {
             /*
               Update the cached content of the github profile that we store
@@ -333,11 +340,6 @@ const init = () => {
             return done(null, req.user);
           }
 
-          const existingUserWithProviderId = await getUserByIndex(
-            'githubProviderId',
-            profile.id
-          );
-
           // 2
           // if no user exists with this provider id, it's safe to save on the req.user's object
           if (!existingUserWithProviderId) {
@@ -359,7 +361,10 @@ const init = () => {
 
           // if a user exists with this provider id, don't do anything and return
           if (existingUserWithProviderId) {
-            return done(null, req.user);
+            return done(null, req.user, {
+              message:
+                'Your GitHub account is already linked to another Spectrum profile.',
+            });
           }
         }
 

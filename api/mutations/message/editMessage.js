@@ -1,6 +1,5 @@
 // @flow
 import type { GraphQLContext } from '../../';
-import { convertToRaw } from 'draft-js';
 import { stateFromMarkdown } from 'draft-js-import-markdown';
 import UserError from '../../utils/UserError';
 import {
@@ -17,11 +16,15 @@ import { events } from 'shared/analytics';
 import { isAuthedResolver as requireAuth } from '../../utils/permissions';
 import { trackQueue } from 'shared/bull/queues';
 import { validateRawContentState } from '../../utils/validate-draft-js-input';
+import processMessageContent, {
+  messageTypeObj,
+} from 'shared/draft-utils/process-message-content';
+import type { MessageType } from 'shared/draft-utils/message-types';
 
 type Args = {
   input: {
     id: string,
-    messageType?: 'draftjs' | 'text' | 'media',
+    messageType?: MessageType,
     content: {
       body: string,
     },
@@ -29,8 +32,9 @@ type Args = {
 };
 
 export default requireAuth(async (_: any, args: Args, ctx: GraphQLContext) => {
+  let messageType = args.input.messageType;
   const {
-    input: { id, content, messageType },
+    input: { id, content },
   } = args;
   const { user, loaders } = ctx;
 
@@ -48,25 +52,16 @@ export default requireAuth(async (_: any, args: Args, ctx: GraphQLContext) => {
   }
 
   let body = content.body;
-  if (messageType === 'text') {
-    body = JSON.stringify(
-      convertToRaw(
-        stateFromMarkdown(body, {
-          parserOptions: {
-            breaks: true,
-          },
-        })
-      )
-    );
-    messageType === 'draftjs';
+  if (messageType === messageTypeObj.text) {
+    body = processMessageContent(messageTypeObj.text, body);
+    messageType = messageTypeObj.draftjs;
   }
-
   const eventFailed =
     message.threadType === 'story'
       ? events.MESSAGE_EDITED_FAILED
       : events.DIRECT_MESSAGE_EDITED_FAILED;
 
-  if (messageType === 'draftjs') {
+  if (messageType === messageTypeObj.draftjs) {
     let parsed;
     try {
       parsed = JSON.parse(body);
@@ -84,7 +79,7 @@ export default requireAuth(async (_: any, args: Args, ctx: GraphQLContext) => {
         'Please provide serialized raw DraftJS content state as content.body'
       );
     }
-    if (!validateRawContentState(body)) {
+    if (!validateRawContentState(parsed)) {
       trackQueue.add({
         userId: user.id,
         event: eventFailed,

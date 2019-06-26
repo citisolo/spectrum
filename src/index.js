@@ -19,26 +19,18 @@ import { subscribeToDesktopPush } from 'src/subscribe-to-desktop-push';
 import RedirectHandler from 'src/components/redirectHandler';
 const params = queryString.parse(history.location.search);
 
-// Always redirect ?thread=asdfxyz to the thread view
-if (params.thread) {
+// Redirect legacy ?thread=asdf & ?t=asdf URLs to the proper /<community>/<channel>/<thread>
+// equivalents via the /thread/<id> shorthand
+const threadParam = params.thread || params.t;
+if (threadParam) {
   if (params.m) {
-    history.replace(`/thread/${params.thread}?m=${params.m}`);
+    history.replace(`/thread/${threadParam}?m=${params.m}`);
   } else {
-    history.replace(`/thread/${params.thread}`);
+    history.replace(`/thread/${threadParam}`);
   }
 }
 // If the server passes an initial redux state use that, otherwise construct our own
-const store = initStore(
-  window.__SERVER_STATE__ || {
-    dashboardFeed: {
-      activeThread: params.t || '',
-      mountedWithActiveThread: params.t || '',
-      search: {
-        isOpen: false,
-      },
-    },
-  }
-);
+const store = initStore(window.__SERVER_STATE__ || {});
 
 const App = () => {
   return (

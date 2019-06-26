@@ -3,7 +3,6 @@ import * as React from 'react';
 import compose from 'recompose/compose';
 import FullscreenView from 'src/components/fullscreenView';
 import LoginButtonSet from 'src/components/loginButtonSet';
-import { Loading } from 'src/components/loading';
 import { CommunityAvatar } from 'src/components/avatar';
 import { CLIENT_URL } from 'src/api/constants';
 import {
@@ -20,9 +19,10 @@ import {
   getCommunityByMatch,
   type GetCommunityType,
 } from 'shared/graphql/queries/community/getCommunity';
-import ViewError from 'src/components/viewError';
 import queryString from 'query-string';
 import { track, events } from 'src/helpers/analytics';
+import { LoadingView, ErrorView } from 'src/views/viewHelpers';
+import { OutlineButton } from 'src/components/button';
 
 type Props = {
   data: {
@@ -35,21 +35,36 @@ type Props = {
   redirectPath: ?string,
 };
 
-export class Login extends React.Component<Props> {
-  redirectPath = null;
+type State = {
+  redirectPath: ?string,
+};
+
+export class Login extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+
+    this.state = {
+      redirectPath: props.redirectPath,
+    };
+  }
 
   escape = () => {
     this.props.history.push(`/${this.props.match.params.communitySlug}`);
   };
 
   componentDidMount() {
-    const { location } = this.props;
-    if (location) {
-      const searchObj = queryString.parse(this.props.location.search);
-      this.redirectPath = searchObj.r;
+    const { location, redirectPath } = this.props;
+
+    if (redirectPath) {
+      this.setState({ redirectPath });
     }
 
-    track(events.LOGIN_PAGE_VIEWED, { redirectPath: this.redirectPath });
+    if (location && !redirectPath) {
+      const searchObj = queryString.parse(this.props.location.search);
+      this.setState({ redirectPath: searchObj.r });
+    }
+
+    track(events.LOGIN_PAGE_VIEWED, { redirectPath: this.state.redirectPath });
   }
 
   render() {
@@ -58,12 +73,13 @@ export class Login extends React.Component<Props> {
       isLoading,
       match,
     } = this.props;
+    const { redirectPath } = this.state;
 
     if (community && community.id) {
       const { brandedLogin } = community;
 
       return (
-        <FullscreenView hasBackground noCloseButton={true} close={null}>
+        <FullscreenView closePath={`${CLIENT_URL}`}>
           <FullscreenContent
             data-cy="community-login-page"
             style={{ justifyContent: 'center' }}
@@ -75,7 +91,7 @@ export class Login extends React.Component<Props> {
                 size={88}
               />
             </LoginImageContainer>
-            <Title>Sign in to the {community.name} community</Title>
+            <Title>Sign up to join the {community.name} community</Title>
             <Subtitle>
               {brandedLogin.message && brandedLogin.message.length > 0
                 ? brandedLogin.message
@@ -84,11 +100,19 @@ export class Login extends React.Component<Props> {
 
             <LoginButtonSet
               redirectPath={
-                this.redirectPath ||
-                `${CLIENT_URL}/${match.params.communitySlug}`
+                redirectPath || `${CLIENT_URL}/${match.params.communitySlug}`
               }
               signinType={'signin'}
+              githubOnly
             />
+
+            <OutlineButton
+              css={{ width: '100%' }}
+              to={`/login?r=${redirectPath ||
+                `${CLIENT_URL}/${match.params.communitySlug}`}`}
+            >
+              Existing user? Click here to log in
+            </OutlineButton>
 
             <CodeOfConduct>
               By using Spectrum, you agree to our{' '}
@@ -110,25 +134,9 @@ export class Login extends React.Component<Props> {
       );
     }
 
-    if (isLoading) {
-      return (
-        <FullscreenView>
-          <Loading />
-        </FullscreenView>
-      );
-    }
+    if (isLoading) return <LoadingView />;
 
-    return (
-      <FullscreenView close={this.escape}>
-        <ViewError
-          refresh
-          heading={'We had trouble finding this community'}
-          subheading={
-            'Double check that this community exists or refresh to try again'
-          }
-        />
-      </FullscreenView>
-    );
+    return <ErrorView />;
   }
 }
 

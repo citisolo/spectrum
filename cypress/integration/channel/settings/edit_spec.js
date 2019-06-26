@@ -22,7 +22,7 @@ describe('edit a channel', () => {
 
   it('should edit a channel', () => {
     cy.get('[data-cy="channel-overview"]').should('be.visible');
-
+    cy.get('[data-cy="channel-members"]').should('be.visible');
     cy.get('[data-cy="channel-name-input"]')
       .should('be.visible')
       .click()
@@ -40,8 +40,6 @@ describe('edit a channel', () => {
       .click();
 
     cy.visit(`/${community.slug}/${channel.slug}`);
-    cy.get('[data-cy="channel-profile-full"]').should('be.visible');
-    cy.get('[data-cy="channel-profile-full"]').contains(NEW_NAME);
-    cy.get('[data-cy="channel-profile-full"]').contains(NEW_DESCRIPTION);
+    cy.contains(NEW_NAME);
   });
 });

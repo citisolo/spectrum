@@ -2,7 +2,7 @@
 import * as React from 'react';
 import compose from 'recompose/compose';
 import { connect } from 'react-redux';
-import Icon from 'src/components/icons';
+import Icon from 'src/components/icon';
 import { addToastWithTimeout } from 'src/actions/toasts';
 import { openModal } from 'src/actions/modals';
 import { replyToMessage } from 'src/actions/message';
@@ -13,20 +13,20 @@ import {
   ChatInputWrapper,
   Input,
   InputWrapper,
-  SendButton,
   PhotoSizeError,
-  MarkdownHint,
-  Preformatted,
   PreviewWrapper,
   RemovePreviewButton,
 } from './style';
+import { PrimaryButton } from 'src/components/button';
 import sendMessage from 'shared/graphql/mutations/message/sendMessage';
 import sendDirectMessage from 'shared/graphql/mutations/message/sendDirectMessage';
 import { getMessageById } from 'shared/graphql/queries/message/getMessage';
 import MediaUploader from './components/mediaUploader';
 import { QuotedMessage as QuotedMessageComponent } from '../message/view';
 import type { Dispatch } from 'redux';
-import { ESC, BACKSPACE, DELETE } from 'src/helpers/keycodes';
+import { MarkdownHint } from 'src/components/markdownHint';
+import { useAppScroller } from 'src/hooks/useAppScroller';
+import { MEDIA_BREAK } from 'src/components/layout';
 
 const QuotedMessage = connect()(
   getMessageById(props => {
@@ -58,56 +58,59 @@ type Props = {
   createThread: Function,
   sendMessage: Function,
   sendDirectMessage: Function,
-  forceScrollToBottom: Function,
   threadType: string,
-  thread: string,
+  threadId: string,
   clear: Function,
   websocketConnection: string,
   networkOnline: boolean,
-  threadData?: Object,
   refetchThread?: Function,
   quotedMessage: ?{ messageId: string, threadId: string },
+  // used to pre-populate the @mention suggestions with participants and the author of the thread
+  participants: Array<?Object>,
   onFocus: ?Function,
   onBlur: ?Function,
 };
 
-// $FlowFixMe
+export const cleanSuggestionUserObject = (user: ?Object) => {
+  if (!user) return null;
+  return {
+    ...user,
+    id: user.username,
+    display: user.username,
+    filterName: user.name.toLowerCase(),
+  };
+};
+
 const ChatInput = (props: Props) => {
-  const cacheKey = `last-content-${props.thread}`;
-  // $FlowFixMe
+  const cacheKey = `last-content-${props.threadId}`;
   const [text, changeText] = React.useState('');
-  // $FlowFixMe
   const [photoSizeError, setPhotoSizeError] = React.useState('');
-  // $FlowFixMe
   const [inputRef, setInputRef] = React.useState(null);
+  const { scrollToBottom } = useAppScroller();
 
   // On mount, set the text state to the cached value if one exists
   // $FlowFixMe
-  React.useEffect(
-    () => {
-      changeText(localStorage.getItem(cacheKey) || '');
-      // NOTE(@mxstbr): We ONLY want to run this if we switch between threads, never else!
-    },
-    [props.thread]
-  );
+  React.useEffect(() => {
+    changeText(localStorage.getItem(cacheKey) || '');
+    // NOTE(@mxstbr): We ONLY want to run this if we switch between threads, never else!
+  }, [props.threadId]);
 
   // Cache the latest text everytime it changes
   // $FlowFixMe
-  React.useEffect(
-    () => {
-      localStorage.setItem(cacheKey, text);
-    },
-    [text]
-  );
+  React.useEffect(() => {
+    localStorage.setItem(cacheKey, text);
+  }, [text]);
 
   // Focus chatInput when quoted message changes
   // $FlowFixMe
-  React.useEffect(
-    () => {
-      if (inputRef) inputRef.focus();
-    },
-    [props.quotedMessage && props.quotedMessage.messageId]
-  );
+  React.useEffect(() => {
+    if (inputRef) inputRef.focus();
+  }, [props.quotedMessage && props.quotedMessage.messageId]);
+
+  React.useEffect(() => {
+    // autofocus the chat input on desktop
+    if (inputRef && window && window.innerWidth > MEDIA_BREAK) inputRef.focus();
+  }, [inputRef]);
 
   const removeAttachments = () => {
     removeQuotedMessage();
@@ -133,6 +136,8 @@ const ChatInput = (props: Props) => {
         if (text.length === 0) removeAttachments();
         return;
       }
+      default:
+        return;
     }
   };
 
@@ -145,7 +150,7 @@ const ChatInput = (props: Props) => {
     // user is creating a new directMessageThread, break the chain
     // and initiate a new group creation with the message being sent
     // in views/directMessages/containers/newThread.js
-    if (props.thread === 'newDirectMessageThread') {
+    if (props.threadId === 'newDirectMessageThread') {
       return props.createThread({
         messageType: file ? 'media' : 'text',
         file,
@@ -158,7 +163,7 @@ const ChatInput = (props: Props) => {
         ? props.sendMessage
         : props.sendDirectMessage;
     return method({
-      threadId: props.thread,
+      threadId: props.threadId,
       messageType: file ? 'media' : 'text',
       threadType: props.threadType,
       parentId: props.quotedMessage,
@@ -195,15 +200,14 @@ const ChatInput = (props: Props) => {
 
     if (!props.currentUser) {
       // user is trying to send a message without being signed in
-      return props.dispatch(openModal('CHAT_INPUT_LOGIN_MODAL', {}));
+      return props.dispatch(openModal('LOGIN_MODAL', {}));
     }
 
-    // If a user sends a message, force a scroll to bottom. This doesn't exist if this is a new DM thread
-    if (props.forceScrollToBottom) props.forceScrollToBottom();
+    scrollToBottom();
 
     if (mediaFile) {
       setIsSendingMediaMessage(true);
-      if (props.forceScrollToBottom) props.forceScrollToBottom();
+      scrollToBottom();
       await sendMessage({
         file: mediaFile,
         body: '{"blocks":[],"entityMap":{}}',
@@ -221,25 +225,27 @@ const ChatInput = (props: Props) => {
 
     if (text.length === 0) return;
 
-    sendMessage({ body: text })
-      .then(() => {
-        // If we're viewing a thread and the user sends a message as a non-member, we need to refetch the thread data
-        if (
-          props.threadType === 'story' &&
-          props.threadData &&
-          !props.threadData.channel.channelPermissions.isMember &&
-          props.refetchThread
-        ) {
-          return props.refetchThread();
-        }
-      })
+    // workaround react-mentions bug by replacing @[username] with @username
+    // @see withspectrum/spectrum#4587
+    sendMessage({ body: text.replace(/@\[([a-z0-9_-]+)\]/g, '@$1') })
+      // .then(() => {
+      //   // If we're viewing a thread and the user sends a message as a non-member, we need to refetch the thread data
+      //   if (
+      //     props.threadType === 'story' &&
+      //     props.threadId &&
+      //     props.refetchThread
+      //   ) {
+      //     return props.refetchThread();
+      //   }
+      // })
       .catch(err => {
-        props.dispatch(addToastWithTimeout('error', err.message));
+        // props.dispatch(addToastWithTimeout('error', err.message));
       });
 
     // Clear the chat input now that we're sending a message for sure
     onChange({ target: { value: '' } });
     removeQuotedMessage();
+    inputRef && inputRef.focus();
   };
 
   // $FlowFixMe
@@ -271,7 +277,7 @@ const ChatInput = (props: Props) => {
   const removeQuotedMessage = () => {
     if (props.quotedMessage)
       props.dispatch(
-        replyToMessage({ threadId: props.thread, messageId: null })
+        replyToMessage({ threadId: props.threadId, messageId: null })
       );
   };
 
@@ -320,7 +326,7 @@ const ChatInput = (props: Props) => {
                 <PreviewWrapper data-cy="staged-quoted-message">
                   <QuotedMessage
                     id={props.quotedMessage}
-                    threadId={props.thread}
+                    threadId={props.threadId}
                   />
                   <RemovePreviewButton
                     data-cy="remove-staged-quoted-message"
@@ -337,30 +343,27 @@ const ChatInput = (props: Props) => {
                 value={text}
                 onFocus={props.onFocus}
                 onBlur={props.onBlur}
+                autoFocus={false}
                 onChange={onChange}
                 onKeyDown={handleKeyPress}
                 inputRef={node => {
                   if (props.onRef) props.onRef(node);
                   setInputRef(node);
                 }}
+                staticSuggestions={props.participants}
               />
             </InputWrapper>
-            <SendButton
+            <PrimaryButton
               data-cy="chat-input-send-button"
-              glyph="send-fill"
               onClick={submit}
-              // hasAttachment={mediaPreview || quotedMessage ? true : false}
-            />
+              style={{ flex: 'none', marginLeft: '8px' }}
+            >
+              Send
+            </PrimaryButton>
           </Form>
         </ChatInputWrapper>
       </ChatInputContainer>
-      <MarkdownHint showHint={text.length > 0} data-cy="markdownHint">
-        <b>**bold**</b>
-        <i>*italic*</i>
-        <Preformatted>`code`</Preformatted>
-        <Preformatted>```codeblock```</Preformatted>
-        <Preformatted>[name](link)</Preformatted>
-      </MarkdownHint>
+      <MarkdownHint showHint={text.length > 0} dataCy="markdownHint" />
     </React.Fragment>
   );
 };
@@ -368,7 +371,7 @@ const ChatInput = (props: Props) => {
 const map = (state, ownProps) => ({
   websocketConnection: state.connectionStatus.websocketConnection,
   networkOnline: state.connectionStatus.networkOnline,
-  quotedMessage: state.message.quotedMessage[ownProps.thread] || null,
+  quotedMessage: state.message.quotedMessage[ownProps.threadId] || null,
 });
 
 export default compose(

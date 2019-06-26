@@ -15,9 +15,9 @@ import createCommunityMutation from 'shared/graphql/mutations/community/createCo
 import type { CreateCommunityType } from 'shared/graphql/mutations/community/createCommunity';
 import { getCommunityBySlugQuery } from 'shared/graphql/queries/community/getCommunity';
 import { searchCommunitiesQuery } from 'shared/graphql/queries/search/searchCommunities';
-import { Button } from 'src/components/buttons';
+import { PrimaryOutlineButton } from 'src/components/button';
 import { CommunityHoverProfile } from 'src/components/hoverProfile';
-import Icon from 'src/components/icons';
+import Icon from 'src/components/icon';
 
 import {
   Input,
@@ -27,7 +27,7 @@ import {
   CoverInput,
   Error,
   Checkbox,
-} from '../../../../components/formElements';
+} from 'src/components/formElements';
 import {
   ImageInputWrapper,
   Spacer,
@@ -124,7 +124,7 @@ class CreateCommunityForm extends React.Component<Props, State> {
       .replace(/-{2,}/g, '-');
     let slug = slugg(lowercaseName);
 
-    if (name.length >= 20) {
+    if (name.length > 20) {
       this.setState({
         nameError: true,
       });
@@ -386,7 +386,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
       photoSizeError ||
       !name ||
       !slug ||
-      !description ||
       !agreeCoC
     ) {
       this.setState({
@@ -668,7 +667,7 @@ class CreateCommunityForm extends React.Component<Props, State> {
 
         <Actions>
           <div />
-          <Button
+          <PrimaryOutlineButton
             onClick={this.create}
             disabled={
               slugTaken ||
@@ -677,14 +676,13 @@ class CreateCommunityForm extends React.Component<Props, State> {
               createError ||
               descriptionError ||
               !name ||
-              !description ||
               !agreeCoC
             }
             loading={isLoading}
-            dataCy="community-create-button"
+            data-cy="community-create-button"
           >
-            Create Community & Continue
-          </Button>
+            {isLoading ? 'Creating...' : 'Create Community & Continue'}
+          </PrimaryOutlineButton>
         </Actions>
       </FormContainer>
     );

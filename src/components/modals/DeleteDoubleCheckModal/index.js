@@ -3,9 +3,9 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import Modal from 'react-modal';
 import compose from 'recompose/compose';
-import { withRouter } from 'react-router';
-import { closeModal } from '../../../actions/modals';
-import { addToastWithTimeout } from '../../../actions/toasts';
+import { withRouter, type History } from 'react-router';
+import { closeModal } from 'src/actions/modals';
+import { addToastWithTimeout } from 'src/actions/toasts';
 import deleteCommunityMutation from 'shared/graphql/mutations/community/deleteCommunity';
 import type { DeleteCommunityType } from 'shared/graphql/mutations/community/deleteCommunity';
 import deleteChannelMutation from 'shared/graphql/mutations/channel/deleteChannel';
@@ -18,7 +18,7 @@ import archiveChannel from 'shared/graphql/mutations/channel/archiveChannel';
 import removeCommunityMember from 'shared/graphql/mutations/communityMember/removeCommunityMember';
 
 import ModalContainer from '../modalContainer';
-import { TextButton, Button } from '../../buttons';
+import { TextButton, WarnButton } from 'src/components/button';
 import { modalStyles } from '../styles';
 import { Actions, Message } from './style';
 import type { Dispatch } from 'redux';
@@ -49,7 +49,7 @@ type Props = {
     redirect?: ?string,
     message?: ?string,
     buttonLabel?: string,
-    extraProps?: Object,
+    extraProps?: any,
   },
   deleteMessage: Function,
   deleteCommunity: Function,
@@ -59,6 +59,29 @@ type Props = {
   removeCommunityMember: Function,
   dispatch: Dispatch<Object>,
   isOpen: boolean,
+  history: History,
+};
+
+export const deleteMessageWithToast = (
+  dispatch: Function,
+  deleteMessage: Function,
+  id: string
+) => {
+  return deleteMessage(id)
+    .then(({ data }: DeleteMessageType) => {
+      const { deleteMessage } = data;
+      if (deleteMessage) {
+        dispatch(addToastWithTimeout('neutral', 'Message deleted.'));
+      }
+    })
+    .catch(err => {
+      dispatch(
+        addToastWithTimeout(
+          'error',
+          `Sorry, we weren't able to delete this message. ${err.message}`
+        )
+      );
+    });
 };
 
 class DeleteDoubleCheckModal extends React.Component<Props, State> {
@@ -72,7 +95,8 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
 
   triggerDelete = () => {
     const {
-      modalProps: { id, entity, redirect },
+      history,
+      modalProps: { id, entity, redirect, extraProps },
       dispatch,
     } = this.props;
 
@@ -82,38 +106,25 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
 
     switch (entity) {
       case 'message':
-        return this.props
-          .deleteMessage(id)
-          .then(({ data }: DeleteMessageType) => {
-            const { deleteMessage } = data;
-            if (deleteMessage) {
-              dispatch(addToastWithTimeout('neutral', 'Message deleted.'));
-              this.setState({
-                isLoading: false,
-              });
-              this.close();
-            }
-            return;
-          })
-          .catch(err => {
-            dispatch(
-              addToastWithTimeout(
-                'error',
-                `Sorry, we weren't able to delete this message. ${err.message}`
-              )
-            );
+        return deleteMessageWithToast(
+          this.props.dispatch,
+          this.props.deleteMessage,
+          id
+        ).then(() => {
+          this.setState({
+            isLoading: false,
           });
+          this.close();
+        });
       case 'thread': {
+        if (!extraProps) return;
+        const { community } = extraProps.thread;
         return this.props
           .deleteThread(id)
           .then(({ data }: DeleteThreadType) => {
             const { deleteThread } = data;
             if (deleteThread) {
-              // TODO: When we figure out the mutation reducers in apollo
-              // client we can just history push and trust the store to update
-              // eslint-disable-next-line
-              window.location.href = redirect ? redirect : '/';
-              // history.push(redirect ? redirect : '/');
+              history.replace(`/${community.slug}?tab=posts`);
               dispatch(addToastWithTimeout('neutral', 'Thread deleted.'));
               this.setState({
                 isLoading: false,
@@ -267,17 +278,14 @@ class DeleteDoubleCheckModal extends React.Component<Props, State> {
           <Message>{message ? message : 'Are you sure?'}</Message>
 
           <Actions>
-            <TextButton onClick={this.close} color={'warn.alt'}>
-              Cancel
-            </TextButton>
-            <Button
+            <TextButton onClick={this.close}>Cancel</TextButton>
+            <WarnButton
               loading={this.state.isLoading}
-              color="warn"
               onClick={this.triggerDelete}
-              dataCy={'delete-button'}
+              data-cy={'delete-button'}
             >
               {buttonLabel || 'Delete'}
-            </Button>
+            </WarnButton>
           </Actions>
         </ModalContainer>
       </Modal>

@@ -1,10 +1,12 @@
 // @flow
 const debug = require('debug')('api:mutations:thread:publish-thread');
 import stringSimilarity from 'string-similarity';
-import { stateFromMarkdown } from 'draft-js-import-markdown';
+import slugg from 'slugg';
 import type { GraphQLContext } from '../../';
 import UserError from '../../utils/UserError';
+import { addMessage } from '../message/addMessage';
 import { uploadImage } from '../../utils/file-storage';
+import processThreadContent from 'shared/draft-utils/process-thread-content';
 import {
   publishThread,
   editThread,
@@ -13,6 +15,8 @@ import {
 import { createParticipantInThread } from '../../models/usersThreads';
 import type { FileUpload, DBThread } from 'shared/types';
 import { toPlainText, toState } from 'shared/draft-utils';
+import { setCommunityLastActive } from '../../models/community';
+import { setCommunityLastSeen } from '../../models/usersCommunities';
 import {
   processReputationEventQueue,
   sendThreadNotificationQueue,
@@ -23,6 +27,7 @@ import getPerspectiveScore from 'athena/queues/moderationEvents/perspective';
 import { events } from 'shared/analytics';
 import { trackQueue } from 'shared/bull/queues';
 import { isAuthedResolver as requireAuth } from '../../utils/permissions';
+import { storeMessage } from '../../models/message';
 
 const threadBodyToPlainText = (body: any): string =>
   toPlainText(toState(JSON.parse(body)));
@@ -67,20 +72,11 @@ export default requireAuth(
       );
     }
 
-    if (type === 'TEXT') {
-      type = 'DRAFTJS';
-      if (thread.content.body) {
-        thread.content.body = JSON.stringify(
-          stateFromMarkdown(thread.content.body, {
-            parserOptions: {
-              breaks: true,
-            },
-          })
-        );
-      }
+    if (thread.content.body) {
+      thread.content.body = processThreadContent(type, thread.content.body);
     }
 
-    thread.type = type;
+    thread.type = 'DRAFTJS';
 
     const [
       currentUserChannelPermissions,
@@ -199,6 +195,12 @@ export default requireAuth(
 
       const checkForSpam = usersPreviousPublishedThreads.map(t => {
         if (!t) return false;
+        if (
+          usersPreviousPublishedThreads.length === 1 &&
+          usersPreviousPublishedThreads[0] &&
+          usersPreviousPublishedThreads[0].deletedAt
+        )
+          return false;
 
         const incomingTitle = thread.content.title;
         const thisTitle = t.content.title;
@@ -332,8 +334,19 @@ export default requireAuth(
       });
     }
 
-    // create a relationship between the thread and the author
-    await createParticipantInThread(dbThread.id, user.id);
+    // create a relationship between the thread and the author and set community lastActive
+    const timestamp = new Date(dbThread.createdAt).getTime();
+    await Promise.all([
+      createParticipantInThread(dbThread.id, user.id),
+      setCommunityLastActive(dbThread.communityId, new Date(timestamp)),
+      // Make sure Community.lastSeen > Community.lastActive by one second
+      // for the author
+      setCommunityLastSeen(
+        dbThread.communityId,
+        user.id,
+        new Date(timestamp + 1000)
+      ),
+    ]);
 
     if (!thread.filesToUpload || thread.filesToUpload.length === 0) {
       return dbThread;
@@ -363,8 +376,8 @@ export default requireAuth(
 
     // Replace the local image srcs with the remote image src
     const body = dbThread.content.body && JSON.parse(dbThread.content.body);
-
     if (!body) return dbThread;
+
     const imageKeys = Object.keys(body.entityMap).filter(
       key => body.entityMap[key].type.toLowerCase() === 'image'
     );

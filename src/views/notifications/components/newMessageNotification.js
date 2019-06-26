@@ -7,31 +7,28 @@ import {
   parseContext,
 } from '../utils';
 import { ActorsRow } from './actorsRow';
-import {
-  CardLink,
-  CardContent,
-} from '../../../components/threadFeedCard/style';
-import Icon from '../../../components/icons';
+import { CardLink, CardContent } from 'src/components/threadFeedCard/style';
+import Icon from 'src/components/icon';
 import { sortAndGroupNotificationMessages } from './sortAndGroupNotificationMessages';
 import {
   NotificationCard,
   TextContent,
-  NotificationListRow,
   SuccessContext,
   Content,
 } from '../style';
+import getThreadLink from 'src/helpers/get-thread-link';
 
 type Props = {
   notification: Object,
   currentUser: Object,
   history?: Object,
-  markSingleNotificationSeen?: Function,
-  markSingleNotificationAsSeenInState?: Function,
+  markSingleNotificationSeen: Function,
 };
 
 export const NewMessageNotification = ({
   notification,
   currentUser,
+  markSingleNotificationSeen,
 }: Props) => {
   const actors = parseActors(notification.actors, currentUser, true);
   const event = parseEvent(notification.event);
@@ -45,11 +42,13 @@ export const NewMessageNotification = ({
   }
 
   return (
-    <NotificationCard isSeen={notification.isSeen}>
+    <NotificationCard
+      onClick={() => markSingleNotificationSeen(notification.id)}
+      isSeen={notification.isSeen}
+    >
       <CardLink
         to={{
-          pathname: window.location.pathname,
-          search: `?thread=${notification.context.id}`,
+          pathname: getThreadLink(notification.context.payload),
         }}
       />
       <CardContent>
@@ -65,38 +64,5 @@ export const NewMessageNotification = ({
         </Content>
       </CardContent>
     </NotificationCard>
-  );
-};
-
-export const MiniNewMessageNotification = ({
-  notification,
-  currentUser,
-  history,
-}: Props) => {
-  const actors = parseActors(notification.actors, currentUser, true);
-  const event = parseEvent(notification.event);
-  const date = parseNotificationDate(notification.modifiedAt);
-  const context = parseContext(notification.context, currentUser);
-
-  return (
-    <NotificationListRow isSeen={notification.isSeen}>
-      <CardLink
-        to={{
-          pathname: window.location.pathname,
-          search: `?thread=${notification.context.id}`,
-        }}
-      />
-      <CardContent>
-        <SuccessContext>
-          <Icon glyph="message-fill" />
-          <ActorsRow actors={actors.asObjects} />
-        </SuccessContext>
-        <Content>
-          <TextContent pointer={false}>
-            {actors.asString} {event} {context.asString} {date}
-          </TextContent>
-        </Content>
-      </CardContent>
-    </NotificationListRow>
   );
 };
